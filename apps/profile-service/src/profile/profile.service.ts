@@ -25,7 +25,6 @@ export class ProfileService {
       password: dto.password,
     });
     const user: any = await lastValueFrom(observableUser);
-
     const user_profile = await this.userProfileRepository.save({
       auth_id: user.id,
       name: dto.name,

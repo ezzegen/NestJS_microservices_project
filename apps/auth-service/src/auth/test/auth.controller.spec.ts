@@ -96,11 +96,11 @@ describe('AuthController', () => {
     });
 
     describe('delete-method', () => {
-        let existingId = 1;
+        let id = 1;
         it('should delete and return undefined', async () => {
-          const result = await authController.deleteUser(existingId);
+          const result = await authController.deleteUser(id);
           expect(result).toBeUndefined();
-          expect(deleteUserMock).toBeCalledWith(existingId);
+          expect(deleteUserMock).toBeCalledWith(id);
         });
     });
 
