@@ -1,0 +1,91 @@
+version: "3.9"
+
+services:
+  postgres_profile:
+    container_name: profile_db
+    hostname: profile_db
+    image: postgres:latest
+    environment:
+      PG_DATA: /var/lib/postgresql/data
+      POSTGRES_DB: profile
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5431:5432"
+
+  postgres_auth:
+    container_name: auth_db
+    hostname: auth_db
+    image: postgres:latest
+    environment:
+      PG_DATA: /var/lib/postgresql/data
+      POSTGRES_DB: auth
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+
+  rabbitmq:
+    container_name: rabbitmq
+    hostname: rabbitmq
+    image: rabbitmq:3.11.3-management
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+
+  profile:
+    container_name: profile
+    build: ./apps/profile-service
+    environment:
+      - PORT=3000
+      - POSTGRES_HOST=profile_db
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DATABASE=profile
+      - RMQ_URL=amqp://rabbitmq:5672
+      - RABBITMQ_PROFILE_QUEUE=profile_queue
+      - RABBITMQ_AUTH_QUEUE=auth_queue
+
+    ports:
+      - "3000:3000"
+    depends_on:
+      - rabbitmq
+      - postgres_profile
+      - auth
+    links:
+      - postgres_profile
+
+  auth:
+    container_name: auth
+    build: ./apps/auth-service
+    environment:
+      - PORT=4000
+      - POSTGRES_HOST=auth_db
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DATABASE=auth
+      - RMQ_URL=amqp://rabbitmq:5672
+      - RABBITMQ_AUTH_QUEUE=auth_queue
+    ports:
+      - "4000:4000"
+    depends_on:
+      - rabbitmq
+      - postgres_auth
+    links:
+      - postgres_auth
+
+  api:
+    container_name: api
+    build: ./apps/api-gateway
+    ports:
+      - '5000:5000'
+    environment:
+      - PORT=5000
+      - RABBITMQ_AUTH_QUEUE=auth_queue
+      - RABBITMQ_PROFILE_QUEUE=profiles_queue
+    depends_on:
+      - rabbitmq
+      - auth
+      - profile
